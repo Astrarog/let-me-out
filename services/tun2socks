@@ -1,0 +1,22 @@
+[Unit]
+Description=Tun2Socks
+After=network.target
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=/etc/default/tun2socks
+ExecStartPre=-ip tuntap add mode tun dev tun0
+ExecStartPre=ip addr add 198.18.0.1/24 dev tun0
+ExecStartPre=ip link set dev tun0 up
+ExecStart=tun2socks -device tun://tun0 -proxy ss://chacha20-ietf-poly1305:${SSPASSWORD}@${SSIP}:${SSPORT}
+ExecStartPost=bash -c 'MIP=$(ip r l |grep "default via" | cut -f3 -d" "); LIP=$(ip a l eth0 | awk \'/inet /{ print $2 }\' | cut -f1 -d"/"); ip r del default dev eth0; ip r add default via $MIP dev eth0 metric 200; ip rule add from $LIP table lip; ip r add default via $MIP dev eth0 table lip; ip r add ${SSIP}/32 via $MIP dev eth0'
+ExecStartPost=ip r add default dev tun0 metric 50
+ExecStopPost=-ip r flush table lip
+ExecStopPost=-ip rule delete table lip
+ExecStopPost=-ip link set dev tun0 down
+ExecStopPost=-ip link del dev tun0
+ExecStopPost=-ip r del ${SSIP}/32 dev eth0
+
+[Install]
+WantedBy=multi-user.target

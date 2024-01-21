@@ -1,0 +1,15 @@
+[Unit]
+Description=ssserver service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/ssserver -c /etc/shadowsocks/sssconfig.json
+ExecStop=/usr/bin/killall ssserver
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=ssserver
+
+[Install]
+WantedBy=multi-user.target
