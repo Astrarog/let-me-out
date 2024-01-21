@@ -20,8 +20,12 @@ sudo ./wireguard.sh
 
 # creating tun0 adapter for tun2socks and running it as a daemon
 
-sudo cp services/tun2socks /etc/systemd/system/tun2socks
-sudo echo '20 lip' >> /etc/iproute2/rt_tables
 
-systemctl enable --now tun2socks
+sudo cp tun2socks.env /etc/default/tun2socks
+sudo cp services/tun2socks /etc/systemd/system/tun2socks.service
+
+sudo -i
+echo '20 lip' >> /etc/iproute2/rt_tables
+
+systemctl enable --now tun2socks.service
 
