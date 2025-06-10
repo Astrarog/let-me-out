@@ -5,6 +5,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
+Restart=on-failure
 EnvironmentFile=/etc/default/tun2socks
 ExecStartPre=-ip tuntap add mode tun dev tun0
 ExecStartPre=ip addr add 198.18.0.1/24 dev tun0
