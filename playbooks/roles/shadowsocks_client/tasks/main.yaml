@@ -1,0 +1,73 @@
+# ---------- 0. Предпосылки ----------
+- name: Install helper packages
+  apt:
+    name:
+      - wget
+      - tar
+      - ca-certificates
+      - iproute2
+    state: present
+    update_cache: yes
+  become: yes
+
+# ---------- 1. Go toolchain ----------
+- name: Download Go tarball
+  get_url:
+    url: "https://go.dev/dl/go1.24.4.linux-amd64.tar.gz"
+    dest: /tmp/go1.24.4.linux-amd64.tar.gz
+    mode: '0644'
+    force: no                   # скачиваем, только если файла ещё нет
+  register: go_pkg
+
+- name: Install /usr/local/go (idempotent)
+  when: go_pkg.changed or not (ansible_facts.files is defined and '/usr/local/go/bin/go' in ansible_facts.files)
+  unarchive:
+    src: /tmp/go1.24.4.linux-amd64.tar.gz
+    dest: /usr/local
+    remote_src: yes
+    creates: /usr/local/go/bin/go
+  become: yes
+
+# ---------- 2. tun2socks ----------
+- name: Ensure /usr/local/go exists
+  file:
+    path: /usr/local/go
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Build tun2socks via go install (once)
+  shell: |
+    /usr/local/go/bin/go install github.com/xjasonlyu/tun2socks/v2@v2.6.0
+  environment:
+    GOBIN: /usr/local/bin
+    PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
+  args:
+    creates: /usr/local/bin/tun2socks
+  become: yes
+
+# ---------- 3. Конфиг-файлы ----------
+- name: Deploy /etc/default/tun2socks
+  template:
+    src: tun2socks.env.j2
+    dest: /etc/default/tun2socks
+    mode: '0644'
+  become: yes
+  notify: restart tun2socks
+
+- name: Deploy systemd unit
+  template:
+    src: tun2socks.service.j2
+    dest: /etc/systemd/system/tun2socks.service
+    mode: '0644'
+  become: yes
+  notify: restart tun2socks
+
+
+# ---------- 4. Таблица маршрутов ----------
+- name: Ensure 'lip' table in /etc/iproute2/rt_tables
+  lineinfile:
+    path: /etc/iproute2/rt_tables
+    line: "20 lip"
+    state: present
+  become: yes

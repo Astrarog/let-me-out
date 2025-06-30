@@ -1,0 +1,7 @@
+- name: Configure first hop (WireGuard → tun2socks)
+  hosts: firsthop
+  become: yes
+  roles:
+    - wireguard_install
+    - shadowsocks_client
+

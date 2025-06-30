@@ -1,0 +1,79 @@
+- name: Update apt cache & upgrade base system
+  apt:
+    update_cache: yes
+    upgrade: dist
+  become: yes
+
+- name: Ensure needed packages are present
+  apt:
+    name: 
+      - build-essential
+      - acl
+    state: present
+  become: yes
+
+- name: Create non-root build user
+  user:
+    name: ssbuild
+    comment: "Build user for Shadowsocks-rust"
+    shell: /bin/bash
+    create_home: yes
+  become: yes
+
+- name: Install rustup for ssbuild (if absent)
+  become: yes
+  become_user: ssbuild
+  shell: |
+    curl https://sh.rustup.rs -sSf | sh -s -- -y
+  args:
+    executable: /bin/bash
+    creates: /home/ssbuild/.cargo/bin/rustc
+
+- name: Install shadowsocks-rust via cargo (idempotent)
+  become: yes
+  become_user: ssbuild
+  shell: |
+    source /home/ssbuild/.cargo/env
+    cargo install shadowsocks-rust --jobs 1
+  args:
+    executable: /bin/bash
+    creates: /home/ssbuild/.cargo/bin/ssserver
+
+- name: Copy ssserver to /usr/local/bin
+  copy:
+    src: /home/ssbuild/.cargo/bin/ssserver
+    dest: /usr/local/bin/ssserver
+    mode: '0755'
+    owner: root
+    group: root
+    remote_src: yes
+  become: yes
+  notify: restart ssserver
+
+- name: Ensure /etc/shadowsocks exists
+  file:
+    path: /etc/shadowsocks
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Deploy ssserver JSON config 
+  template:
+    src: ssserver.json.j2
+    dest: /etc/shadowsocks/sssconfig.json
+    owner: root
+    mode: 0644
+  notify: restart ssserver
+
+- name: Deploy systemd unit
+  template:
+    src: ssserver.service
+    dest: /etc/systemd/system/ssserver.service
+  notify: restart ssserver
+
+- name: Open firewall port
+  ufw:
+    rule: allow
+    port: "{{ ss_port }}"
+    proto: "tcp"
+  when: ansible_facts.pkg_mgr == "apt"

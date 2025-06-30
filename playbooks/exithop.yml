@@ -1,0 +1,5 @@
+- name: Configure exit hop (Shadowsocks)
+  hosts: exithop
+  become: yes
+  roles:
+    - shadowsocks_server

@@ -1,0 +1,14 @@
+# https://github.com/hwdsl2/wireguard-install
+- name: Download installer
+  get_url:
+    url: https://get.vpnsetup.net/wg
+    dest: /root/wireguard.sh
+    mode: '0755'
+  register: dl
+
+- name: Run wireguard installer (default settings)
+  shell: |
+    ./wireguard.sh --auto --serveraddr {{ hostvars['fh'].ansible_host }}
+  args:
+    chdir: /root
+  when: dl.changed

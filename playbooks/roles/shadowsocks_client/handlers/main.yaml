@@ -1,0 +1,5 @@
+- name: restart tun2socks
+  systemd:
+    name: tun2socks
+    state: restarted
+    enabled: yes

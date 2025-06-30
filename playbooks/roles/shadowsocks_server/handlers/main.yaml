@@ -1,0 +1,5 @@
+- name: restart ssserver
+  systemd:
+    name: ssserver
+    state: restarted
+    enabled: yes

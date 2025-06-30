@@ -1,0 +1,23 @@
+# inventory.yml
+all:
+  children:
+    firsthop:
+      hosts:
+        fh:
+          ansible_host: "{{ lookup('env', 'FH_IP') }}"
+          ansible_user: "{{ lookup('env', 'FH_USER') }}"
+          ansible_ssh_private_key_file: "{{ lookup('env', 'FH_KEY') }}"
+    exithop:
+      hosts:
+        eh:
+          ansible_host: "{{ lookup('env', 'EH_IP') }}"
+          ansible_user: "{{ lookup('env', 'EH_USER') }}"
+          ansible_ssh_private_key_file: "{{ lookup('env', 'EH_KEY') }}"
+    ss_chain:
+      children:               
+        firsthop: {}          
+        exithop: {}
+      vars:
+        ss_server_ip: "{{ hostvars['eh'].ansible_host }}"
+        ss_port: "{{ lookup('env', 'SS_PORT') | default('8443') }}"
+        ss_password: "{{ lookup('env', 'SS_PASSWORD') }}"
